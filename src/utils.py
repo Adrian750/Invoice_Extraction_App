@@ -39,5 +39,5 @@ def read_file(file):
         return text
     
     else:
-        raise Exception("unsupported file format, only pdf and text file supported")
+        raise Exception("unsupported file format, only pdf and jpeg file supported")
     

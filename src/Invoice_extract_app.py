@@ -4,6 +4,7 @@ import traceback
 import pandas as pd
 from dotenv import load_dotenv
 from src.utils import read_file
+import re
 
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
@@ -12,43 +13,6 @@ from langchain.chains import LLMChain, SequentialChain
 load_dotenv()
 
 key = os.getenv("OPENAI_API_KEY")
-
-llm = ChatOpenAI(openai_api_key = key, model_name = 'gpt-3.5-turbo', temperature = 0.6)
-
-Template = """
-Text: {text}
-You are an expert MCQ generator and a subject-matter expert on {subject}, given the text, it is your responsibility to\
-create a quiz of {number} multiple choice questions for {subject} students in a {tone} tone.
-Make sure the questions are not repeated and check all the questions to be conforming the text as well.
-Make sure to also format your response like RESPONSE_JSON defined below and use it as a guide.\
-Ensure to make {number} MCQs
-### RESPONSE_JSON
-{response_json}
-"""
-
-quiz_generation_prompt = PromptTemplate(
-    input_variables=['text','number','subject','tone','response_json'],
-    template=Template
-)
-
-quiz_chain = LLMChain(llm=llm, prompt=quiz_generation_prompt,output_key='quiz',verbose=True)
-
-Template_2 = """
-You are an expert english gramarian and writer. Given the Multiple Choice Quiz for {subject} students.
-You need to evaluate the complexity of the question and give the complete analysis of the quiz. Only use at max 50 words for complexity
-if the quiz is not on par with the cognitive and analytical abilities of the students,\
-Update the quiz questions which needs to be changed and change the tone such that it perfectly fits the student's ability
-Quiz_MCQs:
-{quiz}
-
-Check from an expert English writer of the above quiz:
-"""
-
-quiz_evaluation_prompt = PromptTemplate(input_variables=['subject','quiz'], template = Template_2)
-quiz_review_chain = LLMChain(llm=llm, prompt = quiz_evaluation_prompt, output_key='review',verbose=True)
-
-generate_evaluate_chain = SequentialChain(chains=[quiz_chain,quiz_review_chain],input_variables= ['text','number','subject','tone','response_json'],
-                                          output_variables = ['quiz','review'], verbose = True)
 
 
 #Function to extract data from text
@@ -61,22 +25,9 @@ def extracted_data(pages_data):
         """
     prompt_template = PromptTemplate(input_variables=["pages"], template=template)
 
-    llm = OpenAI(temperature=.7)
-    full_response=llm(prompt_template.format(pages=pages_data))
-    
+    llm = ChatOpenAI(openai_api_key = key, model_name = 'gpt-3.5-turbo', temperature = 0.6)
 
-    #The below code will be used when we want to use LLAMA 2 model,  we will use Replicate for hosting our model...
-    
-    #output = replicate.run('replicate/llama-2-70b-chat:2c1608e18606fad2812020dc541930f2d0495ce32eee50074220b87300bc16e1', 
-                           #input={"prompt":prompt_template.format(pages=pages_data) ,
-                                  #"temperature":0.1, "top_p":0.9, "max_length":512, "repetition_penalty":1})
-    
-    #full_response = ''
-    #for item in output:
-        #full_response += item
-    
-
-    #print(full_response)
+    full_response=llm(prompt_template.format(pages=pages_data))    
     return full_response
 
 
@@ -97,7 +48,7 @@ def create_docs(user_pdf_list):
     for filename in user_pdf_list:
         
         print(filename)
-        raw_data=get_pdf_text(filename)
+        raw_data= read_file(filename)
         #print(raw_data)
         #print("extracted raw data")
 
@@ -118,8 +69,6 @@ def create_docs(user_pdf_list):
 
         
         df=df.append([data_dict], ignore_index=True)
-        print("********************DONE***************")
-        #df=df.append(save_to_dataframe(llm_extracted_data), ignore_index=True)
 
     df.head()
     return df

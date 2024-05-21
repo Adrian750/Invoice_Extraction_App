@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 setup(
-    name='mcqgenerator',
+    name='Invoice_Extraction_app',
     version='0.0.1',
     author='coker richard',
     author_email='richardaypdeji91@gmail.com',
